@@ -30,8 +30,25 @@ file_import_df =
 
 ## data tidy
 
-Tidy the result; manipulate file names to include control arm and subject ID, make sure weekly observations are “tidy”, and do any other tidying that’s necessary
 ```{r}
-
+file_tidy_df = 
+  file_import_df |> 
+  janitor::clean_names() |> 
+  separate(file_name, c('arm', 'subject_id'), sep = '\\_') |> 
+  select(-path) |> 
+  mutate(
+    subject_id = str_remove(subject_id, '\\.csv'),
+    arm = ifelse(arm == 'con', 'control', 'experience')
+  ) |> 
+  pivot_longer(
+    week_1 : week_8,
+    names_to = 'observation_time',
+    values_to = 'value',
+    names_prefix = 'week_'
+  ) |> 
+  mutate(
+    observation_time = as.numeric(observation_time)
+  )
 ```
-
+* i tidy the result:
+  * i use `separate()` to create variable 'arm' and 'subject_id'. i remove column 'path' as it is not needed. i mutate variable subject_id by deleting the suffix and variable arm by renaming 'con' as 'control' and 'exp' as 'experience'. I tidy cols week_1 to week_8 and create col 'observation_time' indicating weeks for each observation time point and col 'value' for each value. i change the data type of variable observation_time from character type to numeric type.
