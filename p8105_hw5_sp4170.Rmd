@@ -66,3 +66,38 @@ file_tidy_df |>
 * comment
   * the values of subjects in experiment arm suppress the values of subjects in control arm in the last observation time. in the baseline (the first observation time), both arms had similar value, while the spread of baseline value in experiment arm was larger than the spread in the control arm
   * the values of subjects in control arm across observation time did not change appreciably. but the values of subjects in experiment arm across observation time had an increase trend in general.
+
+
+# problem 3
+
+First set the following design elements:
+
+Fix n=30
+Fix σ=5
+Set μ=0
+. Generate 5000 datasets from the model
+For each dataset, save μ̂  and the p-value arising from a test of H:μ=0 using α=0.05
+. Hint: to obtain the estimate and p-value, use broom::tidy to clean the output of t.test.
+```{r}
+sim_ttest = function(n_obs = 30, mu, sigma = 5){
+  tibble(
+      x_vec = rnorm(n = n_obs, mean = mu, sd = sigma)
+  )
+  
+  sim_ttest |> 
+    summarise(
+      mu_hat = t.test(x_vec, conf.level = 0.95) |> 
+        broom::tidy()|> 
+        pull(estimate),
+      p_value = t.test(x_vec, conf.level = 0.95) |> 
+        broom::tidy()|> 
+        pull(p.value)
+    ) 
+  
+}
+```
+i create a function: (1) create a data frame of normally distributed data (set n=30 and sigma(sd)=5). (2) save mu_hat and the p-value arising from a test of H:μ=0 using α=0.05 with this data frame.
+
+
+
+
