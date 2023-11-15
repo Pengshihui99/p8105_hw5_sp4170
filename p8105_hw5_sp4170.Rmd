@@ -38,7 +38,7 @@ file_tidy_df =
   select(-path) |> 
   mutate(
     subject_id = str_remove(subject_id, '\\.csv'),
-    arm = ifelse(arm == 'con', 'control', 'experience')
+    arm = ifelse(arm == 'con', 'control', 'experiment')
   ) |> 
   pivot_longer(
     week_1 : week_8,
@@ -52,3 +52,17 @@ file_tidy_df =
 ```
 * i tidy the result:
   * i use `separate()` to create variable 'arm' and 'subject_id'. i remove column 'path' as it is not needed. i mutate variable subject_id by deleting the suffix and variable arm by renaming 'con' as 'control' and 'exp' as 'experience'. I tidy cols week_1 to week_8 and create col 'observation_time' indicating weeks for each observation time point and col 'value' for each value. i change the data type of variable observation_time from character type to numeric type.
+
+## make a plot
+
+```{r}
+file_tidy_df |> 
+  ggplot(aes(x = observation_time, y = value, color = subject_id, alpha = 0.5)) +
+  geom_line() +
+  facet_grid(. ~ arm)
+```
+
+* i make a spaghetti plot
+* comment
+  * the values of subjects in experiment arm suppress the values of subjects in control arm in the last observation time. in the baseline (the first observation time), both arms had similar value, while the spread of baseline value in experiment arm was larger than the spread in the control arm
+  * the values of subjects in control arm across observation time did not change appreciably. but the values of subjects in experiment arm across observation time had an increase trend in general.
