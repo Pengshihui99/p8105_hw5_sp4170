@@ -1,0 +1,12 @@
+---
+title: "p8105_hw5_sp4170"
+author: "Shihui Peng"
+date: "2023-11-15"
+output: github_document
+---
+load package and set seed for reproducibility
+```{r, echo=FALSE, message=FALSE}
+library(tidyverse)
+set.seed(1)
+```
+
