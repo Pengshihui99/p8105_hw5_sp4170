@@ -70,21 +70,13 @@ file_tidy_df |>
 
 # problem 3
 
-First set the following design elements:
-
-Fix n=30
-Fix σ=5
-Set μ=0
-. Generate 5000 datasets from the model
-For each dataset, save μ̂  and the p-value arising from a test of H:μ=0 using α=0.05
-. Hint: to obtain the estimate and p-value, use broom::tidy to clean the output of t.test.
 ```{r}
 sim_ttest = function(n_obs = 30, mu, sigma = 5){
-  tibble(
+  result_df = tibble(
       x_vec = rnorm(n = n_obs, mean = mu, sd = sigma)
   )
   
-  sim_ttest |> 
+  result_df |> 
     summarise(
       mu_hat = t.test(x_vec, conf.level = 0.95) |> 
         broom::tidy()|> 
@@ -93,11 +85,44 @@ sim_ttest = function(n_obs = 30, mu, sigma = 5){
         broom::tidy()|> 
         pull(p.value)
     ) 
-  
 }
 ```
-i create a function: (1) create a data frame of normally distributed data (set n=30 and sigma(sd)=5). (2) save mu_hat and the p-value arising from a test of H:μ=0 using α=0.05 with this data frame.
+
+* i create a function:  
+  * create a data frame of normally distributed data (set n=30 and sigma(sd)=5). 
+  * save mu_hat and the p-value arising from a test of H:μ=0 using α=0.05 with this data frame.
+
+```{r}
+output = vector('list', length = 5000)
+
+for (i in 1:5000){
+  output[[i]] = sim_ttest(mu = 0)
+}
+
+bind_rows(output)
+
+sim_result_df = 
+  tibble(
+    mu = c(1,2,3,4,5,6)
+  ) |> 
+  mutate(
+    output_list_mu = map(mu, ~rerun(5000, sim_ttest(mu = .x))),
+    estimate_pvalue_df = map(output_list_mu, bind_rows)
+  ) |> 
+  unnest(estimate_pvalue_df) |> 
+  select(-output_list_mu)
+```
+
+* i generate 5000 datasets from the model. set mu = 0. and i bind the results of estimates and p-values of t-tests
+* i repeat the above for μ={1,2,3,4,5,6}
+  * i first create a df for mu values
+  * i create a list containing ttest results (mu_hat and p-values) for each mu value which reran by 5000 times, then i bind these results for each mu
+  * i unnest the mu_hat and p-value dataframe and remove unnecessary cols
 
 
+Make a plot showing the proportion of times the null was rejected (the power of the test) on the y axis and the true value of μ
+ on the x axis. Describe the association between effect size and power.
+```{r}
 
-
+```
+ 
