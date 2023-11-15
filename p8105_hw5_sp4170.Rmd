@@ -10,3 +10,20 @@ library(tidyverse)
 set.seed(1)
 ```
 
+
+# problem 2
+
+## data import
+
+```{r}
+file_name_df = 
+  tibble(
+    file_name = list.files(path = 'data/'),
+    path = str_c('data/', file_name)
+  ) |> 
+  mutate(
+    data = map(path, read_csv)
+  ) |> 
+  unnest(data)
+```
+* i create a df named 'file_name_df', make a tibble consisted of every file's name and their relative path. i use `mutate()` to create a new variable 'data', which contain every csv file i imported using `map()` function. I use `unnest()` to unnest contents of each cell of variable data.
