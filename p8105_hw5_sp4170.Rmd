@@ -8,6 +8,22 @@ load package and set seed for reproducibility
 ```{r, echo=FALSE, message=FALSE}
 library(tidyverse)
 set.seed(1)
+
+knitr::opts_chunk$set(
+  fig.width = 6,
+  fig.asp = .6,
+  out.width = "90%"
+)
+
+theme_set(theme_minimal() + theme(legend.position = "bottom"))
+
+options(
+  ggplot2.continuous.colour = "viridis",
+  ggplot2.continuous.fill = "viridis"
+)
+
+scale_colour_discrete = scale_colour_viridis_d
+scale_fill_discrete = scale_fill_viridis_d
 ```
 
 
@@ -70,6 +86,7 @@ file_tidy_df |>
 
 # problem 3
 
+## create a function
 ```{r}
 sim_ttest = function(n_obs = 30, mu, sigma = 5){
   result_df = tibble(
@@ -91,6 +108,8 @@ sim_ttest = function(n_obs = 30, mu, sigma = 5){
 * i create a function:  
   * create a data frame of normally distributed data (set n=30 and sigma(sd)=5). 
   * save mu_hat and the p-value arising from a test of H:μ=0 using α=0.05 with this data frame.
+
+## generate datasets and repeat diff mu
 
 ```{r}
 output = vector('list', length = 5000)
@@ -119,10 +138,39 @@ sim_result_df =
   * i create a list containing ttest results (mu_hat and p-values) for each mu value which reran by 5000 times, then i bind these results for each mu
   * i unnest the mu_hat and p-value dataframe and remove unnecessary cols
 
+## making plots
 
-Make a plot showing the proportion of times the null was rejected (the power of the test) on the y axis and the true value of μ
- on the x axis. Describe the association between effect size and power.
+### plot 1: showing the proportion of times the null was rejected (the power of the test) on the y-axis and the true value of μ on the x-axis
 ```{r}
+prop_reject_plot =
+  sim_result_df |>
+  mutate(
+    ht_conclusion = ifelse(p_value < 0.05, 'reject H0', 'fail to reject H0')
+  ) |> 
+  group_by(mu) |> 
+  summarise(
+    n_total = n(),
+    n_rejected_null = sum(ht_conclusion == 'reject H0')
+  ) |> 
+  mutate(
+    prop_reject = n_rejected_null / n_total
+  ) |> 
+  ggplot(aes(x = mu, y = prop_reject)) +
+  geom_point() +
+  geom_line() +
+  labs(
+    x = 'true value of mu (value of effect size when mu under H0=0)',
+    y = 'proportion of times the null was rejected (power)',
+    title = 'association between effect size and power'
+  )
 
+prop_reject_plot
+
+ggsave('plot/association between effect size and power.pdf', prop_reject_plot)
 ```
- 
+* i create a new variable ht_conclusion, indicating the conclusion of the hypothesis test
+* i calculate # of total tests and # of tests that reject H0, and then calculate the proportion of reject H0.
+* i draw a plot with true value of mu on x-axis and proportion of times the null was rejected on y=axis. i save this plot into a folder 'plot'.
+* description:
+  * when the effect size increase, power will also increase. (mu under null hypothesis is 0, so the values in x-axis equal effect size). In this case, power increases rapidly from about 0.2 at the beginning when effect size increase, and when effect size comes to 5 and 6, the power becomes appreciably close to 1. 
+  * this increasing trend is not linear. power increases approximately linearly and rapid at the beginning, and the increase speed slow down when effect size = 3, and then the line becomes close to flat when effect size = 5. this indicates that power will increase when effect size increases, but the speed of this increase will slow down. 
