@@ -263,7 +263,7 @@ ggsave('plot/association between effect size and power.pdf', prop_reject_plot)
 * i draw a plot with true value of mu on x-axis and proportion of times the null was rejected on y=axis. i save this plot into a folder 'plot'.
 * description:
   * when the effect size increase, power will also increase. (mu under null hypothesis is 0, so the values in x-axis equal effect size). In this case, power increases rapidly from about 0.2 at the beginning when effect size increase, and when effect size comes to 5 and 6, the power becomes appreciably close to 1. 
-  * this increasing trend is not linear. power increases approximately linearly and rapid at the beginning, and the increase speed slow down when effect size = 3, and then the line becomes close to flat when effect size = 5. this indicates that power will increase when effect size increases, but the speed of this increase will slow down. 
+  * this increasing trend is not linear. power increases approximately linearly and rapid at the beginning (start from mu = 1 as we are comparing mu in 1:6), and the increase speed slow down when effect size = 3, and then the line becomes close to flat when effect size = 5. this indicates that power will increase when effect size increases, but the speed of this increase will slow down. 
   
 ### plot 2: showing the average estimate of μ̂ on the y axis and the true value of μ on the x axis.
 
