@@ -7,6 +7,8 @@ output: github_document
 load package and set seed for reproducibility
 ```{r, echo=FALSE, message=FALSE}
 library(tidyverse)
+library(ggridges)
+library(cowplot)
 set.seed(1)
 
 knitr::opts_chunk$set(
@@ -164,7 +166,8 @@ con_exp_plot =
 file_tidy_df |> 
   ggplot(aes(x = observation_time, y = value, color = subject_id, alpha = 0.5)) +
   geom_line() +
-  facet_grid(. ~ arm)
+  facet_grid(. ~ arm) +
+  scale_x_continuous(breaks = 1:8)
 
 con_exp_plot
 
@@ -182,18 +185,11 @@ ggsave('plot/observation_over_time_two_arms.pdf', con_exp_plot)
 ```{r}
 sim_ttest = function(n_obs = 30, mu, sigma = 5){
   result_df = tibble(
-      x_vec = rnorm(n = n_obs, mean = mu, sd = sigma)
-  )
-  
-  result_df |> 
-    summarise(
-      mu_hat = t.test(x_vec, conf.level = 0.95) |> 
-        broom::tidy()|> 
-        pull(estimate),
-      p_value = t.test(x_vec, conf.level = 0.95) |> 
-        broom::tidy()|> 
-        pull(p.value)
-    ) 
+      rnorm(n = n_obs, mean = mu, sd = sigma)
+  ) |> 
+    t.test(coef = 0.95) |> 
+    broom::tidy() |> 
+    select(estimate, p.value)
 }
 ```
 
@@ -203,41 +199,29 @@ sim_ttest = function(n_obs = 30, mu, sigma = 5){
 
 ## generate datasets and repeat diff mu
 
-```{r}
-output = vector('list', length = 5000)
-
-for (i in 1:5000){
-  output[[i]] = sim_ttest(mu = 0)
-}
-
-bind_rows(output)
-
-sim_result_df = 
-  tibble(
-    mu = c(1,2,3,4,5,6)
-  ) |> 
+```{r, cache=TRUE}
+sim_results_df =
+  expand_grid(
+    mu = c(0,1,2,3,4,5,6),
+    iter = 1:5000
+    ) |> 
   mutate(
-    output_list_mu = map(mu, ~rerun(5000, sim_ttest(mu = .x))),
-    estimate_pvalue_df = map(output_list_mu, bind_rows)
+    estimate_pvalue_df = map(mu, ~sim_ttest(mu=.x))
   ) |> 
-  unnest(estimate_pvalue_df) |> 
-  select(-output_list_mu)
+  unnest(estimate_pvalue_df)
 ```
 
-* i generate 5000 datasets from the model. set mu = 0. and i bind the results of estimates and p-values of t-tests
-* i repeat the above for μ={1,2,3,4,5,6}
-  * i first create a df for mu values
-  * i create a list containing ttest results (mu_hat and p-values) for each mu value which reran by 5000 times, then i bind these results for each mu
-  * i unnest the mu_hat and p-value dataframe and remove unnecessary cols
+* i use expand_grid and map function to generate 5000 datasets for each model. i then repeat the above for mu = 1:6 and at last mu should be in 0:6
+* i unnest the mu_hat and p-value dataframe and remove unnecessary cols
 
 ## making plots
 
 ### plot 1: showing the proportion of times the null was rejected (the power of the test) on the y-axis and the true value of μ on the x-axis
 ```{r}
 prop_reject_plot =
-  sim_result_df |>
+  sim_results_df |>
   mutate(
-    ht_conclusion = ifelse(p_value < 0.05, 'reject H0', 'fail to reject H0')
+    ht_conclusion = ifelse(p.value < 0.05, 'reject H0', 'fail to reject H0')
   ) |> 
   group_by(mu) |> 
   summarise(
@@ -254,7 +238,8 @@ prop_reject_plot =
     x = 'true value of mu (value of effect size when mu under H0=0)',
     y = 'proportion of times the null was rejected (power)',
     title = 'association between effect size and power'
-  )
+  ) +
+  scale_x_continuous(breaks = 1:6)
 
 prop_reject_plot
 
@@ -271,10 +256,10 @@ ggsave('plot/association between effect size and power.pdf', prop_reject_plot)
 
 ```{r}
 ave_mu_hat_plot =
-  sim_result_df |> 
+  sim_results_df |> 
   group_by(mu) |> 
   summarise(
-    mean_mu_hat = mean(mu_hat)
+    mean_mu_hat = mean(estimate)
   ) |> 
   ggplot(aes(x = mu, y = mean_mu_hat)) + 
   geom_point() +
@@ -283,7 +268,8 @@ ave_mu_hat_plot =
     x = ' true value of mu',
     y = 'average estimate of mu_hat',
     title = 'association between true mu and average estimated mu'
-  )
+  ) +
+  scale_x_continuous(breaks = 1:6)
 
 ave_mu_hat_plot
 
@@ -298,14 +284,14 @@ ggsave('plot/avg_mu_hat_and_true_mu.pdf', ave_mu_hat_plot)
 
 ```{r}
 ave_mu_hat_reject_plot =
-  sim_result_df |> 
+  sim_results_df |> 
   mutate(
-    ht_conclusion = ifelse(p_value < 0.05, 'reject H0', 'fail to reject H0')
+    ht_conclusion = ifelse(p.value < 0.05, 'reject H0', 'fail to reject H0')
   ) |> 
   filter(ht_conclusion == 'reject H0') |> 
   group_by(mu) |> 
   summarise(
-    mean_mu_hat = mean(mu_hat)
+    mean_mu_hat = mean(estimate)
   ) |> 
   ggplot(aes(x = mu, y = mean_mu_hat)) + 
   geom_point() +
@@ -314,11 +300,14 @@ ave_mu_hat_reject_plot =
     x = ' true value of mu',
     y = 'average estimate of mu_hat',
     title = 'association between true mu and average estimated mu'
-  )
+  ) +
+  scale_x_continuous(breaks = 1:6)
 
 ave_mu_hat_reject_plot
 
 ggsave('plot/avg_mu_hat_and_true_mu_in_rejectH0.pdf', ave_mu_hat_reject_plot)
+
+plot_grid(ave_mu_hat_plot, ave_mu_hat_reject_plot, ncol = 2)
 ```
 
 * i create a variable ht_conclusion indicating the conclusion of hypothesis test and filter the data to only keep data which the null hypo was rejected.
@@ -327,17 +316,4 @@ ggsave('plot/avg_mu_hat_and_true_mu_in_rejectH0.pdf', ave_mu_hat_reject_plot)
   * when true value of mu in 1,2,3, the average estimate of mu_hat is not that same as the true value of mu.
   * when the true value of mu in 4,5,6, the average estimate of mu_hat is approximately the same as the true value of mu.
 * why?
-  * 
-
-```{r}
-sim_result_df |> 
-  mutate(
-    ht_conclusion = ifelse(p_value < 0.05, 'reject H0', 'fail to reject H0')
-  ) |> 
-  filter(ht_conclusion == 'reject H0') |> 
-  group_by(mu) |> 
-  summarise(
-    mean_mu_hat = mean(mu_hat)
-  ) 
-```
-
+  * because the effect size can 
