@@ -26,6 +26,94 @@ scale_colour_discrete = scale_colour_viridis_d
 scale_fill_discrete = scale_fill_viridis_d
 ```
 
+# problem 1
+
+Read in the data.
+
+```{r}
+homicide_df = 
+  read_csv("data/homicide-data.csv") %>% 
+  mutate(
+    city_state = str_c(city, state, sep = "_"),
+    resolved = case_when(
+      disposition == "Closed without arrest" ~ "unsolved",
+      disposition == "Open/No arrest"        ~ "unsolved",
+      disposition == "Closed by arrest"      ~ "solved",
+    )
+  ) %>% 
+  select(city_state, resolved) %>% 
+  filter(city_state != "Tulsa_AL")
+```
+
+
+Let's look at this a bit
+
+```{r}
+aggregate_df = 
+  homicide_df %>% 
+  group_by(city_state) %>% 
+  summarize(
+    hom_total = n(),
+    hom_unsolved = sum(resolved == "unsolved")
+  )
+```
+
+Can I do a prop test for a single city?
+
+```{r}
+prop.test(
+  aggregate_df %>% filter(city_state == "Baltimore_MD") %>% pull(hom_unsolved), 
+  aggregate_df %>% filter(city_state == "Baltimore_MD") %>% pull(hom_total)) %>% 
+  broom::tidy()
+```
+
+Try to iterate ........
+
+```{r}
+results_df = 
+  aggregate_df %>% 
+  mutate(
+    prop_tests = map2(.x = hom_unsolved, .y = hom_total, ~prop.test(x = .x, n = .y)),
+    tidy_tests = map(.x = prop_tests, ~broom::tidy(.x))
+  ) %>% 
+  select(-prop_tests) %>% 
+  unnest(tidy_tests) %>% 
+  select(city_state, estimate, conf.low, conf.high)
+```
+```{r}
+results_df %>% 
+  mutate(city_state = fct_reorder(city_state, estimate)) %>% 
+  ggplot(aes(x = city_state, y = estimate)) +
+  geom_point() + 
+  geom_errorbar(aes(ymin = conf.low, ymax = conf.high)) + 
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 1))
+```
+
+
+```{r, error = TRUE}
+city_prop_test = function(df) {
+  
+  n_unsovled ...
+  n_total ... 
+  
+  prop.test(.....)
+  
+}
+
+homicide_df = 
+  read_csv("data/homicide-data.csv") %>% 
+  mutate(
+    city_state = str_c(city, state, sep = "_"),
+    resolved = case_when(
+      disposition == "Closed without arrest" ~ "unsolved",
+      disposition == "Open/No arrest"        ~ "unsolved",
+      disposition == "Closed by arrest"      ~ "solved",
+    )
+  ) %>% 
+  select(city_state, resolved) %>% 
+  filter(city_state != "Tulsa_AL") %>% 
+  nest(data = resolved)
+```
 
 # problem 2
 
@@ -84,8 +172,7 @@ ggsave('plot/observation_over_time_two_arms.pdf', con_exp_plot)
 ```
 
 * i make a spaghetti plot
-* comment
-  * the values of subjects in experiment arm suppress the values of subjects in control arm in the last observation time. in the baseline (the first observation time), both arms had similar value, while the spread of baseline value in experiment arm was larger than the spread in the control arm
+* comment* the values of subjects in experiment arm suppress the values of subjects in control arm in the last observation time. in the baseline (the first observation time), both arms had similar value, while the spread of baseline value in experiment arm was larger than the spread in the control arm
   * the values of subjects in control arm across observation time did not change appreciably. but the values of subjects in experiment arm across observation time had an increase trend in general.
 
 
@@ -206,3 +293,51 @@ ggsave('plot/avg_mu_hat_and_true_mu.pdf', ave_mu_hat_plot)
 * i calculate the mean estimated mu for each group of true mu value. then i draw a plot show the relationship and make the average estimate of μ̂ on the y axis and the true value of μ on the x axis.
 * description
   * the true value of mus and the average estimate of mu_hats derived by simulations are approximately the same based on the plot.
+  
+### plot 3: showing the average estimate of mu only in samples for which the null was rejected on the y axis and the true value of μ on the x axis
+
+```{r}
+ave_mu_hat_reject_plot =
+  sim_result_df |> 
+  mutate(
+    ht_conclusion = ifelse(p_value < 0.05, 'reject H0', 'fail to reject H0')
+  ) |> 
+  filter(ht_conclusion == 'reject H0') |> 
+  group_by(mu) |> 
+  summarise(
+    mean_mu_hat = mean(mu_hat)
+  ) |> 
+  ggplot(aes(x = mu, y = mean_mu_hat)) + 
+  geom_point() +
+  geom_line() +
+  labs(
+    x = ' true value of mu',
+    y = 'average estimate of mu_hat',
+    title = 'association between true mu and average estimated mu'
+  )
+
+ave_mu_hat_reject_plot
+
+ggsave('plot/avg_mu_hat_and_true_mu_in_rejectH0.pdf', ave_mu_hat_reject_plot)
+```
+
+* i create a variable ht_conclusion indicating the conclusion of hypothesis test and filter the data to only keep data which the null hypo was rejected.
+* i calculate the mean estimated mu for each group of true mu value. then i draw a plot show the relationship and make the average estimate of μ̂ on the y axis and the true value of μ on the x axis.
+* question: Is the sample average of mu across tests for which the null is rejected approximately equal to the true value of mu?
+  * when true value of mu in 1,2,3, the average estimate of mu_hat is not that same as the true value of mu.
+  * when the true value of mu in 4,5,6, the average estimate of mu_hat is approximately the same as the true value of mu.
+* why?
+  * 
+
+```{r}
+sim_result_df |> 
+  mutate(
+    ht_conclusion = ifelse(p_value < 0.05, 'reject H0', 'fail to reject H0')
+  ) |> 
+  filter(ht_conclusion == 'reject H0') |> 
+  group_by(mu) |> 
+  summarise(
+    mean_mu_hat = mean(mu_hat)
+  ) 
+```
+
