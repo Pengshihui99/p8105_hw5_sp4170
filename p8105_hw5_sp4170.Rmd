@@ -72,10 +72,15 @@ file_tidy_df =
 ## make a plot
 
 ```{r}
+con_exp_plot =
 file_tidy_df |> 
   ggplot(aes(x = observation_time, y = value, color = subject_id, alpha = 0.5)) +
   geom_line() +
   facet_grid(. ~ arm)
+
+con_exp_plot
+
+ggsave('plot/observation_over_time_two_arms.pdf', con_exp_plot)
 ```
 
 * i make a spaghetti plot
@@ -174,3 +179,30 @@ ggsave('plot/association between effect size and power.pdf', prop_reject_plot)
 * description:
   * when the effect size increase, power will also increase. (mu under null hypothesis is 0, so the values in x-axis equal effect size). In this case, power increases rapidly from about 0.2 at the beginning when effect size increase, and when effect size comes to 5 and 6, the power becomes appreciably close to 1. 
   * this increasing trend is not linear. power increases approximately linearly and rapid at the beginning, and the increase speed slow down when effect size = 3, and then the line becomes close to flat when effect size = 5. this indicates that power will increase when effect size increases, but the speed of this increase will slow down. 
+  
+### plot 2: showing the average estimate of μ̂ on the y axis and the true value of μ on the x axis.
+
+```{r}
+ave_mu_hat_plot =
+  sim_result_df |> 
+  group_by(mu) |> 
+  summarise(
+    mean_mu_hat = mean(mu_hat)
+  ) |> 
+  ggplot(aes(x = mu, y = mean_mu_hat)) + 
+  geom_point() +
+  geom_line() +
+  labs(
+    x = ' true value of mu',
+    y = 'average estimate of mu_hat',
+    title = 'association between true mu and average estimated mu'
+  )
+
+ave_mu_hat_plot
+
+ggsave('plot/avg_mu_hat_and_true_mu.pdf', ave_mu_hat_plot)
+```
+
+* i calculate the mean estimated mu for each group of true mu value. then i draw a plot show the relationship and make the average estimate of μ̂ on the y axis and the true value of μ on the x axis.
+* description
+  * the true value of mus and the average estimate of mu_hats derived by simulations are approximately the same based on the plot.
